@@ -87,8 +87,39 @@ namespace cppm
 
             memcpy(m_elems, origin->m_elems, m_size * sizeof(ElemType));
         }
+        RowMatrix(const ElemType array[])
+        {
+            m_size = sizeof(array) / sizeof(ElemType);
+            m_elems = (ElemType *)malloc(sizeof(ElemType) * m_size);
+
+            memcpy(m_elems, array, m_size * sizeof(ElemType));
+        }
+        RowMatrix(const ElemType *array, const uint64 &size)
+        {
+            m_size = size;
+            m_elems = (ElemType *)malloc(sizeof(ElemType) * m_size);
+
+            memcpy(m_elems, array, m_size * sizeof(ElemType));
+        }
 
         uint64 size(void) const {return m_size;}
+
+        ElemType& operator = (const RowMatrix<ElemType> &other)
+        {
+            m_size = other.m_size;
+            m_elems = (ElemType *)realloc(m_elems, m_size);
+
+            memcpy(m_elems, other.m_elems, m_size * sizeof(ElemType));
+            return *this;
+        }
+        ElemType& operator = (const ElemType other[])
+        {
+            m_size = sizeof(other) / sizeof(ElemType);
+            m_elems = (ElemType *)realloc(m_elems, m_size);
+
+            memcpy(m_elems, other, m_size * sizeof(ElemType));
+            return *this;
+        }
 
         ElemType& operator [] (uint64 const& i) const
         {
@@ -108,7 +139,7 @@ namespace cppm
             return result;
         }
         template <class T>
-        RowMatrix<ElemType> operator + (T const n) const
+        RowMatrix<ElemType> operator + (T const& n) const
         {
             if (m_size != 1)
                 throw cppm::IncompatibleSizeException(m_size_t(1, m_size), m_size_t(1, 1));
@@ -134,7 +165,7 @@ namespace cppm
             return result;
         }
         template <class T>
-        RowMatrix<ElemType> operator - (T const n) const
+        RowMatrix<ElemType> operator - (T const& n) const
         {
             if (m_size != 1)
                 throw cppm::IncompatibleSizeException(m_size_t(1, m_size), m_size_t(1, 1));
@@ -153,6 +184,47 @@ namespace cppm
             return result;
         }
 
+        template <class T>
+        RowMatrix<ElemType> operator * (T const& n) const
+        {
+            RowMatrix<ElemType> result(this);
+
+            for (int i = 0; i < m_size; i++)
+                result.m_elems[i] *= n;
+            return result;
+        }
+
+        RowMatrix<ElemType> &operator += (RowMatrix<ElemType> const& a) const
+        {
+            if (a.m_size != m_size)
+                throw cppm::IncompatibleSizeException(m_size_t(1, m_size), m_size_t(1, a.m_size));
+            for (int i = 0; i < m_size; i++)
+                m_elems[i] += a.m_elems[i];
+            return *this;
+        }
+        RowMatrix<ElemType> &operator += (ElemType const& a) const
+        {
+            if (m_size != 1)
+                throw cppm::IncompatibleSizeException(m_size_t(1, m_size), m_size_t(1, 1));
+            m_elems[0] += a;
+            return *this;
+        }
+        RowMatrix<ElemType> &operator -= (RowMatrix<ElemType> const& a) const
+        {
+            if (a.m_size != m_size)
+                throw cppm::IncompatibleSizeException(m_size_t(1, m_size), m_size_t(1, a.m_size));
+            for (int i = 0; i < m_size; i++)
+                m_elems[i] -= a.m_elems[i];
+            return *this;
+        }
+        RowMatrix<ElemType> &operator -= (ElemType const& a) const
+        {
+            if (m_size != 1)
+                throw cppm::IncompatibleSizeException(m_size_t(1, m_size), m_size_t(1, 1));
+            m_elems[0] -= a;
+            return *this;
+        }
+
         ~RowMatrix()
         {
             free(m_elems);
@@ -161,9 +233,14 @@ namespace cppm
 }
 
 template <class T1, class T2>
-cppm::RowMatrix<T1> operator + (T2 const a, cppm::RowMatrix<T1> const b)
+cppm::RowMatrix<T1> operator + (T2 const a, cppm::RowMatrix<T1> const& b)
 {
     return b + a;
+}
+template <class T1, class T2>
+cppm::RowMatrix<T1> operator * (T2 const a, cppm::RowMatrix<T1> const& b)
+{
+    return b * a;
 }
 
 #endif
