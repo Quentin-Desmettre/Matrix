@@ -201,7 +201,7 @@ namespace cppm
             return result;
         }
 
-        RowMatrix<ElemType> &operator += (RowMatrix<ElemType> const& a) const
+        RowMatrix<ElemType> &operator += (RowMatrix<ElemType> const& a)
         {
             if (a.m_size != m_size)
                 throw cppm::IncompatibleSizeException(m_size_t(1, m_size), m_size_t(1, a.m_size));
@@ -209,14 +209,14 @@ namespace cppm
                 m_elems[i] += a.m_elems[i];
             return *this;
         }
-        RowMatrix<ElemType> &operator += (ElemType const& a) const
+        RowMatrix<ElemType> &operator += (ElemType const& a)
         {
             if (m_size != 1)
                 throw cppm::IncompatibleSizeException(m_size_t(1, m_size), m_size_t(1, 1));
             m_elems[0] += a;
             return *this;
         }
-        RowMatrix<ElemType> &operator -= (RowMatrix<ElemType> const& a) const
+        RowMatrix<ElemType> &operator -= (RowMatrix<ElemType> const& a)
         {
             if (a.m_size != m_size)
                 throw cppm::IncompatibleSizeException(m_size_t(1, m_size), m_size_t(1, a.m_size));
@@ -224,7 +224,7 @@ namespace cppm
                 m_elems[i] -= a.m_elems[i];
             return *this;
         }
-        RowMatrix<ElemType> &operator -= (ElemType const& a) const
+        RowMatrix<ElemType> &operator -= (ElemType const& a)
         {
             if (m_size != 1)
                 throw cppm::IncompatibleSizeException(m_size_t(1, m_size), m_size_t(1, 1));
@@ -421,6 +421,7 @@ namespace cppm
             free(m_elems);
         }
     };
+
 }
 
 template <class T1, class T2>
@@ -443,6 +444,23 @@ template <class T1, class T2>
 cppm::LineMatrix<T1> operator * (T2 const a, cppm::LineMatrix<T1> const& b)
 {
     return b * a;
+}
+
+template <class T>
+T operator * (cppm::LineMatrix<T> const& n, cppm::RowMatrix<T> const& b)
+{
+    if (n.size() != b.size())
+        throw cppm::IncompatibleSizeException(m_size_t(1, b.size()), m_size_t(n.size(), 1));
+    T base = T();
+
+    for (int i = 0, t = b.size(); i < t; i++)
+        base += m_elems[i] * n[i];
+    return base;
+}
+template <class T>
+T operator * (cppm::RowMatrix<T> const& n, cppm::LineMatrix<T> const& b)
+{
+    return b * n;
 }
 
 #endif
