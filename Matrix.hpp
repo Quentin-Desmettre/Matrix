@@ -31,7 +31,7 @@ namespace cppm
             if (other->_size[0] != _size[0] || other->_size[1] != _size[1])
                 throw "Incompatible sizes";
             Matrix<Type> r(other);
-            for (int i = 0, n = _size[2]; i < n; i++)
+            for (uint64 i = 0, n = _size[2]; i < n; i++)
                 r._elems[i] += _elems[i];
             return r;
         }
@@ -40,9 +40,33 @@ namespace cppm
             if (other->_size[0] != _size[0] || other->_size[1] != _size[1])
                 throw "Incompatible sizes";
             Matrix<Type> r(other);
-            for (int i = 0, n = _size[2]; i < n; i++)
+            for (uint64 i = 0, n = _size[2]; i < n; i++)
                 r._elems[i] -= _elems[i];
             return r;
+        }
+        Matrix<Type> _mulPtr(Matrix<Type> const *other)
+        {
+            if (_size[1] != other->_size[0])
+                throw "Incompatible sizes";
+            Matrix<Type> result(_size[0], other->_size[1], true);
+
+            uint64 resPos;
+            uint64 resPos1;
+
+            uint64 myPos;
+
+            for(uint64 i = 0, rowX = _size[0]; i < rowX; ++i) {
+                resPos1 = i * result._size[0];
+                for(uint64 j = 0, colY = other->_size[1]; j < colY; ++j) {
+                    resPos = resPos1 + j;
+                    myPos = i * _size[0];
+                    for(uint64 k = 0, rowY = other->_size[0]; k < rowY; ++k) {
+                        result._elems[resPos] += _elems[myPos] * other->at(k, j);
+                        //result.at(i, j) += at(i, k) * other->at(k, j);
+                    }
+                }
+            }
+            return result;
         }
     public:
         Matrix(uint64 const nb_line = 1, uint64 const nb_col = 1, bool const fill = false, Type const filler = Type())
@@ -107,6 +131,16 @@ namespace cppm
         {
             _minusPtr(other);
         }
+
+
+        Matrix<Type> operator*(Matrix<Type> const &other)
+        {
+            return _mulPtr(&other);
+        }
+        Matrix<Type> operator*(Matrix<Type> const *other)
+        {
+            return _mulPtr(other);
+        }
         const size_t& getSize(void) {return _size;}
         Type &at(uint64 const i, uint64 const j)
         {
@@ -123,7 +157,7 @@ namespace cppm
 
 Todo:
 
-*: Type2, Matrix
+*: Type2
 /: Type2
 
 +=: Matrix
