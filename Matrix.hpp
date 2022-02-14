@@ -18,13 +18,22 @@ namespace cppm
         Type *_elems;
         size_t _size;
 
-        void _copyPtr(Matrix<T> const *other)
+        void _copyPtr(Matrix<Type> const *other)
         {
             _size[0] = other->_size[0];
             _size[1] = other->_size[1];
             _size[2] = other->_size[2];
 
-            std::memcpy(_elems, other->_elems, sizeof(T) * _size[2]);
+            std::memcpy(_elems, other->_elems, sizeof(Type) * _size[2]);
+        }
+        Matrix<Type> _addPtr(Matrix<Type> const *other)
+        {
+            if (other->_size[0] != _size[0] || other->_size[1] != _size[1])
+                throw "Incompatible sizes";
+            Matrix<Type> r(other);
+            for (int i = 0, n = _size[2]; i < n; i++)
+                r._elems[i] += _elems[i];
+            return r;
         }
     public:
         Matrix(uint64 const nb_line = 1, uint64 const nb_col = 1, bool const fill = false, Type const filler = Type())
@@ -72,6 +81,15 @@ namespace cppm
             return *this;
         }
 
+        Matrix<Type> operator+(Matrix<Type> const &other)
+        {
+            return _addPtr(&other);
+        }
+        Matrix<Type> operator+(Matrix<Type> const *other)
+        {
+            return _addPtr(other);
+        }
+
         const size_t& getSize(void) {return _size;}
         Type &at(uint64 const i, uint64 const j)
         {
@@ -88,7 +106,6 @@ namespace cppm
 
 Todo:
 
-+: Matrix
 -: Matrix
 *: Type2, Matrix
 /: Type2
