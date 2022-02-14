@@ -35,6 +35,15 @@ namespace cppm
                 r._elems[i] += _elems[i];
             return r;
         }
+        Matrix<Type> _minusPtr(Matrix<Type> const *other)
+        {
+            if (other->_size[0] != _size[0] || other->_size[1] != _size[1])
+                throw "Incompatible sizes";
+            Matrix<Type> r(other);
+            for (int i = 0, n = _size[2]; i < n; i++)
+                r._elems[i] -= _elems[i];
+            return r;
+        }
     public:
         Matrix(uint64 const nb_line = 1, uint64 const nb_col = 1, bool const fill = false, Type const filler = Type())
         {
@@ -90,6 +99,14 @@ namespace cppm
             return _addPtr(other);
         }
 
+        Matrix<Type> operator-(Matrix<Type> const &other)
+        {
+            _minusPtr(&other);
+        }
+        Matrix<Type> operator-(Matrix<Type> const *other)
+        {
+            _minusPtr(other);
+        }
         const size_t& getSize(void) {return _size;}
         Type &at(uint64 const i, uint64 const j)
         {
@@ -106,7 +123,6 @@ namespace cppm
 
 Todo:
 
--: Matrix
 *: Type2, Matrix
 /: Type2
 
