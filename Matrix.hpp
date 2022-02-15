@@ -102,7 +102,7 @@ namespace cppm
 
             std::memcpy(_elems, other->_elems, sizeof(Type) * _size[2]);
         }
-        Matrix<Type> _addPtr(Matrix<Type> const *other)
+        Matrix<Type> _addPtr(Matrix<Type> const *other) const
         {
             if (other->_size[0] != _size[0] || other->_size[1] != _size[1])
                 throw "Incompatible sizes";
@@ -127,7 +127,7 @@ namespace cppm
             }
             return r;
         }
-        Matrix<Type> _minusPtr(Matrix<Type> const *other)
+        Matrix<Type> _minusPtr(Matrix<Type> const *other) const
         {
             if (other->_size[0] != _size[0] || other->_size[1] != _size[1])
                 throw "Incompatible sizes";
@@ -152,7 +152,7 @@ namespace cppm
             }
             return r;
         }
-        Matrix<Type> _mulPtr(Matrix<Type> const *other)
+        Matrix<Type> _mulPtr(Matrix<Type> const *other) const
         {
             if (_size[1] != other->_size[0])
                 throw "Incompatible sizes";
@@ -185,7 +185,7 @@ namespace cppm
             return result;
         }
         template <class T2>
-        Matrix<Type> _mulConst(T2 const &other)
+        Matrix<Type> _mulConst(T2 const &other) const
         {
             Matrix<Type> r(this);
 
@@ -208,7 +208,7 @@ namespace cppm
             return r;
         }
         template <class T2>
-        Matrix<Type> _divConst(T2 const &other)
+        Matrix<Type> _divConst(T2 const &other) const
         {
             Matrix<Type> r(this);
 
@@ -280,44 +280,49 @@ namespace cppm
             return *this;
         }
 
-        Matrix<Type> operator+(Matrix<Type> const &other)
+        Matrix<Type> operator+(Matrix<Type> const &other) const
         {
             return _addPtr(&other);
         }
-        Matrix<Type> operator+(Matrix<Type> const *other)
+        Matrix<Type> operator+(Matrix<Type> const *other) const
         {
             return _addPtr(other);
         }
 
-        Matrix<Type> operator-(Matrix<Type> const &other)
+        Matrix<Type> operator-(Matrix<Type> const &other) const
         {
             _minusPtr(&other);
         }
-        Matrix<Type> operator-(Matrix<Type> const *other)
+        Matrix<Type> operator-(Matrix<Type> const *other) const
         {
             _minusPtr(other);
         }
 
-        Matrix<Type> operator*(Matrix<Type> const &other)
+        Matrix<Type> operator*(Matrix<Type> const &other) const
         {
             return _mulPtr(&other);
         }
-        Matrix<Type> operator*(Matrix<Type> const *other)
+        Matrix<Type> operator*(Matrix<Type> const *other) const
         {
             return _mulPtr(other);
         }
 
         template<class T2>
-        Matrix<Type> operator*(T2 const& other)
+        Matrix<Type> operator*(T2 const& other) const
         {
             return _mulConst<T2>(other);
         }
         template<class T2>
-        Matrix<Type> operator/(T2 const& other)
+        Matrix<Type> operator/(T2 const& other) const
         {
             return _divConst<T2>(other);
         }
 
+        template <class T2>
+        friend Matrix<Type> operator*(Matrix<Type> const& a, T2 const &other)
+        {
+            return a.operator*(other);
+        }
         const size_t& getSize() const {return _size;}
         Type &at(uint64 const i, uint64 const j) const
         {
