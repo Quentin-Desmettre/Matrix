@@ -143,7 +143,6 @@ namespace cppm
             _minusPtr(other);
         }
 
-
         Matrix<Type> operator*(Matrix<Type> const &other)
         {
             return _mulPtr(&other);
@@ -151,6 +150,28 @@ namespace cppm
         Matrix<Type> operator*(Matrix<Type> const *other)
         {
             return _mulPtr(other);
+        }
+
+        template<class T2>
+        Matrix<Type> operator*(T2 const& other)
+        {
+            Matrix<Type> r(this);
+            Type *elm = r._elems;
+
+            for (int i = 0; i < _size[2]; i++)
+                elm[i] *= other;
+            return r;
+        }
+        template<class T2>
+        Matrix<Type> operator/(T2 const& other)
+        {
+            Matrix<Type> r(this);
+            Type *elm = r._elems;
+            uint64 const size = _size[2];
+
+            for (uint64 i = 0; i < size; i++)
+                elm[i] /= other;
+            return r;
         }
         const size_t& getSize() const {return _size;}
         Type &at(uint64 const i, uint64 const j) const
@@ -167,9 +188,6 @@ namespace cppm
 /* operators:
 
 Todo:
-
-*: Type2
-/: Type2
 
 +=: Matrix
 -=: Matrix
