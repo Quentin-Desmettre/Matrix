@@ -6,11 +6,28 @@
 #include <cstring>
 #include <chrono>
 #include <iostream>
+#include <thread>
+#include <vector>
+
+typedef unsigned long uint64;
+
+template<class Type>
+void _mulPtr_n(uint64 i0, uint64 const iMax, uint64 const kMax, uint64 const jMax, uint64 const offset,
+    Type *relm, Type const *oelm, Type const *elm)
+{
+    for(; i0 < iMax; ++i0)
+        for(uint64 k = 0; k < kMax; ++k)
+            for(uint64 j = 0; j < jMax; ++j)
+                relm[i0 * jMax + j] += elm[i0 * offset + k] * oelm[k * jMax + j];
+}
+
 namespace cppm
 {
     typedef unsigned long uint64;
     typedef long int64;
     typedef uint64 size_t[3];
+
+    static const unsigned int __MAX_THREADS = std::thread::hardware_concurrency() / 2;
 
     template <class Type>
     class Matrix
@@ -18,14 +35,36 @@ namespace cppm
     private:
         Type *_elems;
         size_t _size;
+        std::vector<uint64> _segments;
 
+        void _initSegments(void)
+        {
+            if (__MAX_THREADS == 0)
+                return;
+            _segments.reserve(__MAX_THREADS * 2);
+
+            uint64 start = 0;
+            uint64 end = _size[0] / __MAX_THREADS;
+            uint64 const offset = end;
+            unsigned int i = 0;
+            unsigned const n = (__MAX_THREADS - 1) * 2;
+
+            for (; i < n; i += 2) {
+                _segments[i] = start;
+                _segments[i + 1] = end;
+                start += offset;
+                end += offset;
+            }
+            _segments[i] = start;
+            _segments[i + 1] = _size[0];
+        }
         void _copyPtr(Matrix<Type> const *other)
         {
-            size_t const os = other->_size;
+            _size[0] = other->_size[0];
+            _size[1] = other->_size[1];
+            _size[2] = other->_size[2];
 
-            _size[0] = os[0];
-            _size[1] = os[1];
-            _size[2] = os[2];
+            _initSegments();
 
             std::memcpy(_elems, other->_elems, sizeof(Type) * _size[2]);
         }
@@ -70,11 +109,21 @@ namespace cppm
             Type const *oelm = other->_elems;
             Type const *elm = _elems;
 
-            for(uint64 i = 0; i < iMax; ++i)
-                for(uint64 k = 0; k < kMax; ++k)
-                    for(uint64 j = 0; j < jMax; ++j)
-                        relm[i * jMax + j] +=
-                            elm[i * offset + k] * oelm[k * jMax + j];
+            if (iMax >= __MAX_THREADS) {
+                std::thread threads[__MAX_THREADS];
+
+                for (int i = 0; i < __MAX_THREADS; i++)
+                    threads[i] = std::thread(_mulPtr_n<Type>, _segments[2 * i], _segments[2 * i + 1], kMax, jMax, offset, relm, oelm, elm);
+                for (int i = 0; i < __MAX_THREADS; i++)
+                    threads[i].join();
+
+            } else {
+                for(uint64 i = 0; i < iMax; ++i)
+                    for(uint64 k = 0; k < kMax; ++k)
+                        for(uint64 j = 0; j < jMax; ++j)
+                            relm[i * jMax + j] +=
+                                elm[i * offset + k] * oelm[k * jMax + j];
+            }
             return result;
         }
     public:
@@ -85,6 +134,8 @@ namespace cppm
             _size[0] = nb_line;
             _size[1] = nb_col;
             _size[2] = nb_col * nb_line;
+
+            _initSegments();
 
             _elems = new Type[_size[2]];
             if (fill)
