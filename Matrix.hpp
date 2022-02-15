@@ -4,7 +4,8 @@
 #include <utility>
 #include <string>
 #include <cstring>
-
+#include <chrono>
+#include <iostream>
 namespace cppm
 {
     typedef unsigned long uint64;
@@ -20,9 +21,11 @@ namespace cppm
 
         void _copyPtr(Matrix<Type> const *other)
         {
-            _size[0] = other->_size[0];
-            _size[1] = other->_size[1];
-            _size[2] = other->_size[2];
+            size_t const os = other->_size;
+
+            _size[0] = os[0];
+            _size[1] = os[1];
+            _size[2] = os[2];
 
             std::memcpy(_elems, other->_elems, sizeof(Type) * _size[2]);
         }
@@ -31,8 +34,12 @@ namespace cppm
             if (other->_size[0] != _size[0] || other->_size[1] != _size[1])
                 throw "Incompatible sizes";
             Matrix<Type> r(other);
-            for (uint64 i = 0, n = _size[2]; i < n; i++)
-                r._elems[i] += _elems[i];
+
+            uint64 const n = _size[2];
+            Type const *elm = _elems;
+
+            for (uint64 i = 0; i < n; i++)
+                r._elems[i] += elm[i];
             return r;
         }
         Matrix<Type> _minusPtr(Matrix<Type> const *other)
@@ -40,32 +47,34 @@ namespace cppm
             if (other->_size[0] != _size[0] || other->_size[1] != _size[1])
                 throw "Incompatible sizes";
             Matrix<Type> r(other);
-            for (uint64 i = 0, n = _size[2]; i < n; i++)
-                r._elems[i] -= _elems[i];
+
+            uint64 const n = _size[2];
+            Type const *elm = _elems;
+
+            for (uint64 i = 0; i < n; i++)
+                r._elems[i] -= elm[i];
             return r;
         }
         Matrix<Type> _mulPtr(Matrix<Type> const *other)
         {
             if (_size[1] != other->_size[0])
                 throw "Incompatible sizes";
-            Matrix<Type> result(_size[0], other->_size[1], true);
 
-            uint64 resPos;
-            uint64 resPos1;
+            uint64 const kMax = other->_size[0];
+            uint64 const iMax = _size[0];
+            uint64 const offset = _size[1];
+            uint64 const jMax = other->_size[1];
+            Matrix<Type> result(iMax, jMax, true);
 
-            uint64 myPos;
+            Type *relm = result._elems;
+            Type const *oelm = other->_elems;
+            Type const *elm = _elems;
 
-            for(uint64 i = 0, rowX = _size[0]; i < rowX; ++i) {
-                resPos1 = i * result._size[0];
-                for(uint64 j = 0, colY = other->_size[1]; j < colY; ++j) {
-                    resPos = resPos1 + j;
-                    myPos = i * _size[0];
-                    for(uint64 k = 0, rowY = other->_size[0]; k < rowY; ++k) {
-                        result._elems[resPos] += _elems[myPos] * other->at(k, j);
-                        //result.at(i, j) += at(i, k) * other->at(k, j);
-                    }
-                }
-            }
+            for(uint64 i = 0; i < iMax; ++i)
+                for(uint64 k = 0; k < kMax; ++k)
+                    for(uint64 j = 0; j < jMax; ++j)
+                        relm[i * jMax + j] +=
+                            elm[i * offset + k] * oelm[k * jMax + j];
             return result;
         }
     public:
@@ -79,15 +88,17 @@ namespace cppm
 
             _elems = new Type[_size[2]];
             if (fill)
-                for (uint64 i = 0, n = _size[2]; i < n; i++)
+                for (uint64 i = 0; i < _size[2]; i++)
                     _elems[i] = filler;
         }
         Matrix(Matrix<Type> const& other)
         {
+            _elems = new Type[other._size[2]];
             _copyPtr(&other);
         }
         Matrix(Matrix<Type> const *other)
         {
+            _elems = new Type[other->_size[2]];
             _copyPtr(other);
         }
         ~Matrix()
@@ -141,14 +152,14 @@ namespace cppm
         {
             return _mulPtr(other);
         }
-        const size_t& getSize(void) {return _size;}
-        Type &at(uint64 const i, uint64 const j)
+        const size_t& getSize() const {return _size;}
+        Type &at(uint64 const i, uint64 const j) const
         {
-            if (j > _size[1])
-                throw "Bad column index: " + std::to_string(j);
-            if (i > _size[0])
+            if (i >= _size[0])
                 throw "Bad row index: " + std::to_string(i);
-            return _elems[i * _size[0] + j];
+            if (j >= _size[1])
+                throw "Bad column index: " + std::to_string(j);
+            return _elems[i * _size[1] + j];
         }
     };
 }
