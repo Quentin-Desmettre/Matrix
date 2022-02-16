@@ -3,74 +3,13 @@
 
 #include <utility>
 #include <string>
-#include <cstring>
-#include <chrono>
-#include <iostream>
 #include <thread>
 #include <vector>
 #include <algorithm>
 
-typedef unsigned long uint64;
-
-template<class Type>
-void _mulPtr_n(uint64 i0, uint64 const iMax, uint64 const kMax, uint64 const jMax, uint64 const offset,
-    Type *relm, Type const *oelm, Type const *elm)
-{
-    for(; i0 < iMax; ++i0)
-        for(uint64 k = 0; k < kMax; ++k)
-            for(uint64 j = 0; j < jMax; ++j)
-                relm[i0 * jMax + j] += elm[i0 * offset + k] * oelm[k * jMax + j];
-}
-
-template<class Type>
-void _addPtr_n(uint64 i0, uint64 const iMax, Type *relm, Type const *elm)
-{
-    for (; i0 < iMax; ++i0)
-        relm[i0] += elm[i0];
-}
-
-template<class Type>
-void _subPtr_n(uint64 i0, uint64 const iMax, Type *relm, Type const *elm)
-{
-    for (; i0 < iMax; ++i0)
-        relm[i0] -= elm[i0];
-}
-
-template<class Type, class T2>
-void _mulPtr_n2(uint64 i0, uint64 const iMax, Type *relm, T2 const elm)
-{
-    for (; i0 < iMax; ++i0)
-        relm[i0] *= elm;
-}
-
-template<class Type, class T2>
-void _divPtr_n(uint64 i0, uint64 const iMax, Type *relm, T2 const elm)
-{
-    for (; i0 < iMax; ++i0)
-        relm[i0] /= elm;
-}
-
-template <class Type>
-void memcpyType(Type *dest, Type const *source, uint64 i0, uint64 const iMax)
-{
-    for (; i0 < iMax; ++i0)
-        dest[i0] = source[i0];
-}
-
-template <class Type>
-void _compN(Type const *a, Type const *b, uint64 i0, uint64 const iMax, bool *isEq)
-{
-    for (; i0 < iMax && *isEq; i0++)
-        if (a[i0] != b[i0]) {
-            *isEq = false;
-            break;
-        }
-}
-
 namespace cppm
 {
     typedef unsigned long uint64;
-    typedef long int64;
     typedef uint64 size_t[3];
 
     static const unsigned int __MAX_THREADS = std::thread::hardware_concurrency() / 2;
@@ -83,6 +22,50 @@ namespace cppm
         size_t _size;
         std::vector<uint64> _segmentsMul;
         std::vector<uint64> _segmentsLine;
+
+        static void _mulPtr_n(uint64 i0, uint64 const iMax, uint64 const kMax, uint64 const jMax, uint64 const offset,
+            Type *relm, Type const *oelm, Type const *elm)
+        {
+            for(; i0 < iMax; ++i0)
+                for(uint64 k = 0; k < kMax; ++k)
+                    for(uint64 j = 0; j < jMax; ++j)
+                        relm[i0 * jMax + j] += elm[i0 * offset + k] * oelm[k * jMax + j];
+        }
+        static void _addPtr_n(uint64 i0, uint64 const iMax, Type *relm, Type const *elm)
+        {
+            for (; i0 < iMax; ++i0)
+                relm[i0] += elm[i0];
+        }
+        static void _subPtr_n(uint64 i0, uint64 const iMax, Type *relm, Type const *elm)
+        {
+            for (; i0 < iMax; ++i0)
+                relm[i0] -= elm[i0];
+        }
+        template <class T2>
+        static void _mulPtr_n2(uint64 i0, uint64 const iMax, Type *relm, T2 const elm)
+        {
+            for (; i0 < iMax; ++i0)
+                relm[i0] *= elm;
+        }
+        template <class T2>
+        static void _divPtr_n(uint64 i0, uint64 const iMax, Type *relm, T2 const elm)
+        {
+            for (; i0 < iMax; ++i0)
+                relm[i0] /= elm;
+        }
+        static void memcpyType(Type *dest, Type const *source, uint64 i0, uint64 const iMax)
+        {
+            for (; i0 < iMax; ++i0)
+                dest[i0] = source[i0];
+        }
+        static void _compN(Type const *a, Type const *b, uint64 i0, uint64 const iMax, bool *isEq)
+        {
+            for (; i0 < iMax && *isEq; i0++)
+                if (a[i0] != b[i0]) {
+                    *isEq = false;
+                    break;
+                }
+        }
 
         void _initSegmentWith(std::vector<uint64> &s, uint64 const& max)
         {
@@ -125,12 +108,12 @@ namespace cppm
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 0; i < __MAX_THREADS; i++)
-                    threads[i] = std::thread(memcpyType<Type>, _elems, other->_elems,
+                    threads[i] = std::thread(memcpyType, _elems, other->_elems,
                                             _segmentsLine[2 * i], _segmentsLine[2 * i + 1]);
                 for (int i = 0; i < __MAX_THREADS; i++)
                     threads[i].join();
             } else
-                memcpyType<Type>(_elems, other->_elems, 0, n);
+                memcpyType(_elems, other->_elems, 0, n);
         }
         void _addPtr(Matrix<Type> *cur, Matrix<Type> const& other) const
         {
@@ -145,7 +128,7 @@ namespace cppm
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 0; i < __MAX_THREADS; ++i)
-                    threads[i] = std::thread(_addPtr_n<Type>,
+                    threads[i] = std::thread(_addPtr_n,
                                              cur->_segmentsLine[2 * i], cur->_segmentsLine[2 * i + 1],
                                              relm, elm);
                 for (int i = 0; i < __MAX_THREADS; ++i)
@@ -169,7 +152,7 @@ namespace cppm
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 0; i < __MAX_THREADS; ++i)
-                    threads[i] = std::thread(_subPtr_n<Type>,
+                    threads[i] = std::thread(_subPtr_n,
                                              cur->_segmentsLine[2 * i], cur->_segmentsLine[2 * i + 1],
                                              relm, elm);
                 for (int i = 0; i < __MAX_THREADS; ++i)
@@ -199,7 +182,7 @@ namespace cppm
                 std::thread threads[__MAX_THREADS];
 
                 for (unsigned i = 0; i < __MAX_THREADS; ++i)
-                    threads[i] = std::thread(_mulPtr_n<Type>, _segmentsMul[2 * i], _segmentsMul[2 * i + 1], kMax, jMax, offset, relm, oelm, elm);
+                    threads[i] = std::thread(_mulPtr_n, _segmentsMul[2 * i], _segmentsMul[2 * i + 1], kMax, jMax, offset, relm, oelm, elm);
                 for (unsigned i = 0; i < __MAX_THREADS; ++i)
                     threads[i].join();
 
@@ -223,7 +206,7 @@ namespace cppm
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 0; i < __MAX_THREADS; ++i)
-                    threads[i] = std::thread(_mulPtr_n2<Type, T2>,
+                    threads[i] = std::thread(_mulPtr_n2<T2>,
                                             cur->_segmentsLine[2 * i],cur-> _segmentsLine[2 * i + 1],
                                             elm, other);
                 for (int i = 0; i < __MAX_THREADS; ++i)
@@ -245,7 +228,7 @@ namespace cppm
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 0; i < __MAX_THREADS; ++i)
-                    threads[i] = std::thread(_divPtr_n<Type, T2>,
+                    threads[i] = std::thread(_divPtr_n<T2>,
                                             cur->_segmentsLine[2 * i],cur-> _segmentsLine[2 * i + 1],
                                             elm, other);
                 for (int i = 0; i < __MAX_THREADS; ++i)
@@ -334,7 +317,9 @@ namespace cppm
         template <class T2>
         friend Matrix<Type> operator*(T2 const &other, Matrix<Type> const& a)
         {
-            return a._mulConst<T2>(other);
+            Matrix<Type> r(a);
+            r._mulConst<T2>(&r, other);
+            return r;
         }
 
         bool operator==(Matrix<Type> const& other)
@@ -350,12 +335,12 @@ namespace cppm
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 1; i < __MAX_THREADS; ++i)
-                    threads[i] = std::thread(_compN<Type>, _elems, elm, _segmentsLine[2 * i], _segmentsLine[2 * i + 1], &isEq);
+                    threads[i] = std::thread(_compN, _elems, elm, _segmentsLine[2 * i], _segmentsLine[2 * i + 1], &isEq);
                 for (int i = 1; i < __MAX_THREADS; ++i)
                     threads[i].join();
 
             } else
-                _compN<Type>(_elems, elm, 0, n, &isEq);
+                _compN(_elems, elm, 0, n, &isEq);
             return isEq;
         }
         bool operator!=(Matrix<Type> const& other)
