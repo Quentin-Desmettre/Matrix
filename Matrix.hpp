@@ -49,6 +49,13 @@ void _divPtr_n(uint64 i0, uint64 const iMax, Type *relm, T2 const elm)
         relm[i0] /= elm;
 }
 
+template <class Type>
+void memcpyType(Type *dest, Type const *source, uint64 i0, uint64 const iMax)
+{
+    for (; i0 < iMax; ++i0)
+        dest[i0] = source[i0];
+}
+
 namespace cppm
 {
     typedef unsigned long uint64;
@@ -94,13 +101,25 @@ namespace cppm
         }
         void _copyPtr(Matrix<Type> const *other)
         {
+            uint64 const n = _size[2];
+            _size[2] = other->_size[2];
+
             _size[0] = other->_size[0];
             _size[1] = other->_size[1];
-            _size[2] = other->_size[2];
+
 
             _initSegments();
 
-            std::memcpy(_elems, other->_elems, sizeof(Type) * _size[2]);
+            if (n >= __MAX_THREADS) {
+                std::thread threads[__MAX_THREADS];
+
+                for (int i = 0; i < __MAX_THREADS; i++)
+                    threads[i] = std::thread(memcpy<Type>, _elems, other->_elems,
+                                            _segmentsLine[2 * i], _segmentsLine[2 * i + 1]);
+                for (int i = 0; i < __MAX_THREADS; i++)
+                    threads[i].join();
+            } else
+                memcpyType<Type>(_elems, other->_elems, 0, n);
         }
         Matrix<Type> _addPtr(Matrix<Type> const *other) const
         {
