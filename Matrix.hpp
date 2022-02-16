@@ -383,6 +383,12 @@ namespace cppm
             return *this;
         }
 
+        Matrix<Type> &operator*=(Matrix<Type> const& other)
+        {
+            Matrix<Type> cpy = _mulPtr(other);
+
+            return operator=(cpy);
+        }
         const size_t& getSize() const {return _size;}
         Type &at(uint64 const i, uint64 const j) const
         {
