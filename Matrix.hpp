@@ -8,6 +8,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <algorithm>
 
 typedef unsigned long uint64;
 
@@ -54,6 +55,16 @@ void memcpyType(Type *dest, Type const *source, uint64 i0, uint64 const iMax)
 {
     for (; i0 < iMax; ++i0)
         dest[i0] = source[i0];
+}
+
+template <class Type>
+void _compN(Type const *a, Type const *b, uint64 i0, uint64 const iMax, bool *isEq)
+{
+    for (; i0 < iMax && *isEq; i0++)
+        if (a[i0] != b[i0]) {
+            *isEq = false;
+            break;
+        }
 }
 
 namespace cppm
@@ -121,9 +132,9 @@ namespace cppm
             } else
                 memcpyType<Type>(_elems, other->_elems, 0, n);
         }
-        Matrix<Type> _addPtr(Matrix<Type> const *other) const
+        Matrix<Type> _addPtr(Matrix<Type> const& other) const
         {
-            if (other->_size[0] != _size[0] || other->_size[1] != _size[1])
+            if (other._size[0] != _size[0] || other._size[1] != _size[1])
                 throw "Incompatible sizes";
             Matrix<Type> r(other);
 
@@ -146,14 +157,14 @@ namespace cppm
             }
             return r;
         }
-        Matrix<Type> _minusPtr(Matrix<Type> const *other) const
+        Matrix<Type> _minusPtr(Matrix<Type> const& other) const
         {
-            if (other->_size[0] != _size[0] || other->_size[1] != _size[1])
+            if (other._size[0] != _size[0] || other._size[1] != _size[1])
                 throw "Incompatible sizes";
-            Matrix<Type> r(other);
+            Matrix<Type> r(this);
 
             uint64 const n = _size[2];
-            Type const *elm = _elems;
+            Type const *elm = other._elems;
             Type *relm = r._elems;
 
             if (n >= __MAX_THREADS) {
@@ -171,19 +182,19 @@ namespace cppm
             }
             return r;
         }
-        Matrix<Type> _mulPtr(Matrix<Type> const *other) const
+        Matrix<Type> _mulPtr(Matrix<Type> const& other) const
         {
-            if (_size[1] != other->_size[0])
+            if (_size[1] != other._size[0])
                 throw "Incompatible sizes";
 
-            uint64 const kMax = other->_size[0];
+            uint64 const kMax = other._size[0];
             uint64 const iMax = _size[0];
             uint64 const offset = _size[1];
-            uint64 const jMax = other->_size[1];
+            uint64 const jMax = other._size[1];
             Matrix<Type> result(iMax, jMax, true);
 
             Type *relm = result._elems;
-            Type const *oelm = other->_elems;
+            Type const *oelm = other._elems;
             Type const *elm = _elems;
 
             if (iMax >= __MAX_THREADS) {
@@ -203,7 +214,6 @@ namespace cppm
             }
             return result;
         }
-
 
         template <class T2>
         Matrix<Type> _mulConst(T2 const &other) const
@@ -292,39 +302,18 @@ namespace cppm
             _copyPtr(&other);
             return *this;
         }
-        Matrix<Type>& operator=(Matrix<Type> const *other)
-        {
-            if (_size[2] != other->_size[2]) {
-                delete [] _elems;
-                _elems = new Type[other->_size[2]];
-            }
-            _copyPtr(other);
-            return *this;
-        }
 
         Matrix<Type> operator+(Matrix<Type> const &other) const
-        {
-            return _addPtr(&other);
-        }
-        Matrix<Type> operator+(Matrix<Type> const *other) const
         {
             return _addPtr(other);
         }
 
         Matrix<Type> operator-(Matrix<Type> const &other) const
         {
-            _minusPtr(&other);
-        }
-        Matrix<Type> operator-(Matrix<Type> const *other) const
-        {
-            _minusPtr(other);
+            return _minusPtr(other);
         }
 
         Matrix<Type> operator*(Matrix<Type> const &other) const
-        {
-            return _mulPtr(&other);
-        }
-        Matrix<Type> operator*(Matrix<Type> const *other) const
         {
             return _mulPtr(other);
         }
@@ -345,6 +334,34 @@ namespace cppm
         {
             return a._mulConst<T2>(other);
         }
+
+        bool operator==(Matrix<Type> const& other)
+        {
+            if (_size[0] != other._size[0] || _size[1] != other._size[1])
+                return false;
+            bool isEq = true;
+
+            uint64 const n = _size[2];
+            Type *elm = other._elems;
+
+            if (n >= __MAX_THREADS) {
+                std::thread threads[__MAX_THREADS];
+
+                for (int i = 1; i < __MAX_THREADS; ++i)
+                    threads[i] = std::thread(_compN<Type>, _elems, elm, _segmentsLine[2 * i], _segmentsLine[2 * i + 1], &isEq);
+                for (int i = 1; i < __MAX_THREADS; ++i)
+                    threads[i].join();
+
+            } else
+                _compN<Type>(_elems, elm, 0, n, &isEq);
+            return isEq;
+        }
+        bool operator!=(Matrix<Type> const& other)
+        {
+            return !operator==(other);
+        }
+
+
         const size_t& getSize() const {return _size;}
         Type &at(uint64 const i, uint64 const j) const
         {
@@ -365,9 +382,6 @@ Todo:
 -=: Matrix
 *=: Matrix, Type2
 /=: Type2
-
-==: Matrix
-!=: Matrix
 
 Statics for identity
 
