@@ -66,12 +66,17 @@ namespace cppm
                     break;
                 }
         }
-
+        static void _transposeN(Type *a, Type const *b, uint64 j, uint64 const jMax,
+                                uint64 const oldCol, uint64 const oldRow)
+        {
+            for (; j < jMax; ++j)
+                for (uint64 i = 0; i < oldCol; ++i)
+                    a[i * oldRow + j] = b[j * oldCol + i];
+        }
         void _initSegmentWith(std::vector<uint64> &s, uint64 const& max)
         {
             if (__MAX_THREADS == 0)
                 return;
-            s.reserve(__MAX_THREADS * 2);
 
             uint64 start = 0;
             uint64 end = max / __MAX_THREADS;
@@ -80,8 +85,8 @@ namespace cppm
             unsigned const n = (__MAX_THREADS - 1) * 2;
 
             for (; i < n; i += 2) {
-                s[i] = start;
-                s[i + 1] = end;
+                s.push_back(start);
+                s.push_back(end);
                 start += offset;
                 end += offset;
             }
@@ -368,6 +373,40 @@ namespace cppm
             return *this;
         }
 
+        Matrix<Type> &transpose(void)
+        {
+            Matrix<Type> copy(this);
+
+            uint64 const oldRow = _size[0];
+            uint64 const oldCol = _size[1];
+            _size[0] = oldCol;
+            _size[1] = oldRow;
+            Type const *oelm = copy._elems;
+
+            if (oldCol >= __MAX_THREADS) {
+                std::thread threads[__MAX_THREADS];
+
+                for (int i = 0; i < __MAX_THREADS; ++i)
+                    threads[i] = std::thread(_transposeN,
+                                             _elems, oelm,
+                                             _segmentsMul[2 * i], _segmentsMul[2 * i + 1],
+                                             oldCol, oldRow);
+                for (int i = 0; i < __MAX_THREADS; ++i)
+                    threads[i].join();
+
+            } else {
+                for (uint64 j = 0; j < oldRow; ++j)
+                    for (uint64 i = 0; i < oldCol; ++i)
+                        _elems[i * oldRow + j] = oelm[j * oldCol + i];
+            }
+            return *this;
+        }
+        Matrix<Type> getTranspose(void)
+        {
+            Matrix<Type> cpy(this);
+            cpy.transpose();
+            return cpy;
+        }
         Matrix<Type> &operator*=(Matrix<Type> const& other)
         {
             Matrix<Type> cpy = _mulPtr(other);
@@ -402,6 +441,9 @@ namespace cppm
 
 Todo:
 
+
+getTranspose
+transpose
 */
 
 #endif // E3096311_CEA5_475E_847E_7C8C54043D10
