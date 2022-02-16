@@ -437,13 +437,4 @@ namespace cppm
     };
 }
 
-/* operators:
-
-Todo:
-
-
-getTranspose
-transpose
-*/
-
 #endif // E3096311_CEA5_475E_847E_7C8C54043D10
