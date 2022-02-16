@@ -361,6 +361,14 @@ namespace cppm
             return !operator==(other);
         }
 
+        static Matrix<Type> identity(uint64 const& size, Type const& unity)
+        {
+            Matrix<Type> r(size, size, true);
+
+            for (uint64 i = 0; i < size; i++)
+                r._elems[i * size + i] = unity;
+            return r;
+        }
 
         const size_t& getSize() const {return _size;}
         Type &at(uint64 const i, uint64 const j) const
@@ -382,8 +390,6 @@ Todo:
 -=: Matrix
 *=: Matrix, Type2
 /=: Type2
-
-Statics for identity
 
 */
 
