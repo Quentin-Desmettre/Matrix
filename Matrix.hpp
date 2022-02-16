@@ -132,21 +132,21 @@ namespace cppm
             } else
                 memcpyType<Type>(_elems, other->_elems, 0, n);
         }
-        Matrix<Type> _addPtr(Matrix<Type> const& other) const
+        void _addPtr(Matrix<Type> *cur, Matrix<Type> const& other) const
         {
-            if (other._size[0] != _size[0] || other._size[1] != _size[1])
+            if (other._size[0] != cur->_size[0] || other._size[1] != cur->_size[1])
                 throw "Incompatible sizes";
-            Matrix<Type> r(other);
 
-            uint64 const n = _size[2];
-            Type const *elm = _elems;
-            Type *relm = r._elems;
+            uint64 const n = cur->_size[2];
+            Type const *elm = other._elems;
+            Type *relm = cur->_elems;
 
             if (n >= __MAX_THREADS) {
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 0; i < __MAX_THREADS; ++i)
-                    threads[i] = std::thread(_addPtr_n<Type>, _segmentsLine[2 * i], _segmentsLine[2 * i + 1],
+                    threads[i] = std::thread(_addPtr_n<Type>,
+                                             cur->_segmentsLine[2 * i], cur->_segmentsLine[2 * i + 1],
                                              relm, elm);
                 for (int i = 0; i < __MAX_THREADS; ++i)
                     threads[i].join();
@@ -155,23 +155,22 @@ namespace cppm
                 for (uint64 i = 0; i < n; ++i)
                     relm[i] += elm[i];
             }
-            return r;
         }
-        Matrix<Type> _minusPtr(Matrix<Type> const& other) const
+        void _minusPtr(Matrix<Type> *cur, Matrix<Type> const& other) const
         {
-            if (other._size[0] != _size[0] || other._size[1] != _size[1])
+            if (other._size[0] != cur->_size[0] || other._size[1] != cur->_size[1])
                 throw "Incompatible sizes";
-            Matrix<Type> r(this);
 
-            uint64 const n = _size[2];
+            uint64 const n = cur->_size[2];
             Type const *elm = other._elems;
-            Type *relm = r._elems;
+            Type *relm = cur->_elems;
 
             if (n >= __MAX_THREADS) {
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 0; i < __MAX_THREADS; ++i)
-                    threads[i] = std::thread(_subPtr_n<Type>, _segmentsLine[2 * i], _segmentsLine[2 * i + 1],
+                    threads[i] = std::thread(_subPtr_n<Type>,
+                                             cur->_segmentsLine[2 * i], cur->_segmentsLine[2 * i + 1],
                                              relm, elm);
                 for (int i = 0; i < __MAX_THREADS; ++i)
                     threads[i].join();
@@ -180,7 +179,6 @@ namespace cppm
                 for (uint64 i = 0; i < n; ++i)
                     relm[i] -= elm[i];
             }
-            return r;
         }
         Matrix<Type> _mulPtr(Matrix<Type> const& other) const
         {
@@ -216,18 +214,17 @@ namespace cppm
         }
 
         template <class T2>
-        Matrix<Type> _mulConst(T2 const &other) const
+        void _mulConst(Matrix<Type> *cur, T2 const &other) const
         {
-            Matrix<Type> r(this);
-
-            uint64 const n = _size[2];
-            Type *elm = r._elems;
+            uint64 const n = cur->_size[2];
+            Type *elm = cur->_elems;
 
             if (n >= __MAX_THREADS) {
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 0; i < __MAX_THREADS; ++i)
-                    threads[i] = std::thread(_mulPtr_n2<Type, T2>, _segmentsLine[2 * i], _segmentsLine[2 * i + 1],
+                    threads[i] = std::thread(_mulPtr_n2<Type, T2>,
+                                            cur->_segmentsLine[2 * i],cur-> _segmentsLine[2 * i + 1],
                                             elm, other);
                 for (int i = 0; i < __MAX_THREADS; ++i)
                     threads[i].join();
@@ -236,23 +233,21 @@ namespace cppm
                 for (uint64 i = 0; i < n; ++i)
                     elm[i] *= other;
             }
-            return r;
         }
 
         template <class T2>
-        Matrix<Type> _divConst(T2 const &other) const
+        void _divConst(Matrix<Type> *cur, T2 const &other) const
         {
-            Matrix<Type> r(this);
-
-            uint64 const n = _size[2];
-            Type *elm = r._elems;
+            uint64 const n = cur->_size[2];
+            Type *elm = cur->_elems;
 
             if (n >= __MAX_THREADS) {
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 0; i < __MAX_THREADS; ++i)
-                    threads[i] = std::thread(_divPtr_n<Type, T2>, _segmentsLine[2 * i], _segmentsLine[2 * i + 1],
-                                             elm, other);
+                    threads[i] = std::thread(_divPtr_n<Type, T2>,
+                                            cur->_segmentsLine[2 * i],cur-> _segmentsLine[2 * i + 1],
+                                            elm, other);
                 for (int i = 0; i < __MAX_THREADS; ++i)
                     threads[i].join();
 
@@ -260,7 +255,6 @@ namespace cppm
                 for (uint64 i = 0; i < n; ++i)
                     elm[i] /= other;
             }
-            return r;
         }
     public:
         Matrix(uint64 const nb_line = 1, uint64 const nb_col = 1, bool const fill = false, Type const filler = Type())
@@ -305,12 +299,16 @@ namespace cppm
 
         Matrix<Type> operator+(Matrix<Type> const &other) const
         {
-            return _addPtr(other);
+            Matrix<Type> r(this);
+            _addPtr(&r, other);
+            return r;
         }
 
         Matrix<Type> operator-(Matrix<Type> const &other) const
         {
-            return _minusPtr(other);
+            Matrix<Type> r(this);
+            _minusPtr(&r, other);
+            return r;
         }
 
         Matrix<Type> operator*(Matrix<Type> const &other) const
@@ -321,12 +319,16 @@ namespace cppm
         template<class T2>
         Matrix<Type> operator*(T2 const& other) const
         {
-            return _mulConst<T2>(other);
+            Matrix<Type> r(this);
+            _mulConst<T2>(&r, other);
+            return r;
         }
         template<class T2>
         Matrix<Type> operator/(T2 const& other) const
         {
-            return _divConst<T2>(other);
+            Matrix<Type> r(this);
+            _divConst<T2>(&r, other);
+            return r;
         }
 
         template <class T2>
@@ -368,6 +370,12 @@ namespace cppm
             for (uint64 i = 0; i < size; i++)
                 r._elems[i * size + i] = unity;
             return r;
+        }
+
+        Matrix<Type> &operator+=(Matrix<Type> const& other)
+        {
+            _addPtr(this, other);
+            return *this;
         }
 
         const size_t& getSize() const {return _size;}
