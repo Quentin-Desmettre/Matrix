@@ -389,6 +389,18 @@ namespace cppm
 
             return operator=(cpy);
         }
+        template<class T2>
+        Matrix<Type> &operator*=(T2 const& other)
+        {
+            _mulConst<T2>(this, other);
+            return *this;
+        }
+        template<class T2>
+        Matrix<Type> &operator/=(T2 const& other)
+        {
+            _divConst<T2>(this, other);
+            return *this;
+        }
         const size_t& getSize() const {return _size;}
         Type &at(uint64 const i, uint64 const j) const
         {
@@ -404,9 +416,6 @@ namespace cppm
 /* operators:
 
 Todo:
-
-*=: Matrix, Type2
-/=: Type2
 
 */
 
