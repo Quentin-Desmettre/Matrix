@@ -377,6 +377,11 @@ namespace cppm
             _addPtr(this, other);
             return *this;
         }
+        Matrix<Type> &operator-=(Matrix<Type> const& other)
+        {
+            _minusPtr(this, other);
+            return *this;
+        }
 
         const size_t& getSize() const {return _size;}
         Type &at(uint64 const i, uint64 const j) const
@@ -394,8 +399,6 @@ namespace cppm
 
 Todo:
 
-+=: Matrix
--=: Matrix
 *=: Matrix, Type2
 /=: Type2
 
