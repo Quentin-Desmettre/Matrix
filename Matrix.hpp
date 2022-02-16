@@ -101,8 +101,8 @@ namespace cppm
         }
         void _copyPtr(Matrix<Type> const *other)
         {
-            uint64 const n = _size[2];
             _size[2] = other->_size[2];
+            uint64 const n = _size[2];
 
             _size[0] = other->_size[0];
             _size[1] = other->_size[1];
@@ -114,7 +114,7 @@ namespace cppm
                 std::thread threads[__MAX_THREADS];
 
                 for (int i = 0; i < __MAX_THREADS; i++)
-                    threads[i] = std::thread(memcpy<Type>, _elems, other->_elems,
+                    threads[i] = std::thread(memcpyType<Type>, _elems, other->_elems,
                                             _segmentsLine[2 * i], _segmentsLine[2 * i + 1]);
                 for (int i = 0; i < __MAX_THREADS; i++)
                     threads[i].join();
@@ -203,6 +203,8 @@ namespace cppm
             }
             return result;
         }
+
+
         template <class T2>
         Matrix<Type> _mulConst(T2 const &other) const
         {
@@ -216,7 +218,7 @@ namespace cppm
 
                 for (int i = 0; i < __MAX_THREADS; ++i)
                     threads[i] = std::thread(_mulPtr_n2<Type, T2>, _segmentsLine[2 * i], _segmentsLine[2 * i + 1],
-                                             elm, other);
+                                            elm, other);
                 for (int i = 0; i < __MAX_THREADS; ++i)
                     threads[i].join();
 
@@ -226,6 +228,7 @@ namespace cppm
             }
             return r;
         }
+
         template <class T2>
         Matrix<Type> _divConst(T2 const &other) const
         {
@@ -338,9 +341,9 @@ namespace cppm
         }
 
         template <class T2>
-        friend Matrix<Type> operator*(Matrix<Type> const& a, T2 const &other)
+        friend Matrix<Type> operator*(T2 const &other, Matrix<Type> const& a)
         {
-            return a.operator*(other);
+            return a._mulConst<T2>(other);
         }
         const size_t& getSize() const {return _size;}
         Type &at(uint64 const i, uint64 const j) const
