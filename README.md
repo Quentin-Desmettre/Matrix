@@ -34,7 +34,7 @@ int main(void)
     // Error: Incompatible types
     cppm::Matrix<int> mat4 = mat3;
     
-    // Exception: Incompatibles sizes
+    // This throw an exception: Incompatible sizes
     mat3 = cpmm::Matrix<double>(7, 7);
     mat3 *= mat2;
     
