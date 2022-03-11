@@ -1,10 +1,12 @@
 # Matrix
 
 Matrix is my attempt at making a highly optimized C++ matrix library.
-I built it using only the C++ Standard Library.
-It currently only uses the CPU.
-Optimization were made by taking advantage of the CPU cache, and by using as many threads as possible.
-In a future update, it will be possible to limit the maximum number of threads usable by the library.
+
+I built it using only the C++ Standard Library, so it currently only uses the CPU.
+
+Optimization were made by taking advantage of the CPU cache, and by using as many CPU threads as possible.
+
+In a future update, it will be possible to limit the maximum number of threads usable by each matrix, and by the library in general.
 
 ## Installation
 
